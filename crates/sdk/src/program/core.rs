@@ -300,7 +300,7 @@ impl Program {
         Ok(abi_meta.witness_types)
     }
 
-    fn load(&self) -> Result<CompiledProgram, ProgramError> {
+    pub fn load(&self) -> Result<CompiledProgram, ProgramError> {
         let compiled = CompiledProgram::new(
             self.source,
             self.arguments.build_arguments(),
