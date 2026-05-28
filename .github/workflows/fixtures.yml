@@ -29,7 +29,7 @@ jobs:
       matrix:
         toolchain: [ "1.91.0", "stable" ]
         build-dir: [ "fixtures" ]
-        owner_repo: [ "BlockstreamResearch/smplx" ]
+        owner_repo: [ "ikripaka/smplx" ]
 
     steps:
       - name: Checkout
@@ -87,7 +87,7 @@ jobs:
     strategy:
       matrix:
         build-dir: [ "fixtures" ]
-        owner_repo: [ "BlockstreamResearch/smplx" ]
+        owner_repo: [ "ikripaka/smplx" ]
     steps:
       - name: Checkout
         uses: actions/checkout@v6
