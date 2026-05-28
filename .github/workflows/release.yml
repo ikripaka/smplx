@@ -105,6 +105,7 @@ jobs:
             simplex
             elementsd
             electrs
+            smplx-nextest
 
       - name: Record attestation URL
         env:
