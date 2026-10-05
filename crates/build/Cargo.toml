@@ -1,9 +1,10 @@
 [package]
-name = "smplx-build"
+name = "smplx-build-test"
 version = "0.0.12"
 description = "Simplex build command internal implementation"
 license.workspace = true
 edition.workspace = true
+repository = "https://github.com/ikripaka/smplx"
 
 [lints]
 workspace = true

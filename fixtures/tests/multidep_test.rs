@@ -2,8 +2,8 @@ use simplex::simplicityhl::elements::Script;
 
 use simplex::transaction::{FinalTransaction, PartialInput, ProgramInput, RequiredSignature};
 
-use simplex_fixtures::artifacts::imports::multidep::MultidepProgram;
-use simplex_fixtures::artifacts::imports::multidep::derived_multidep::{MultidepArguments, MultidepWitness};
+use simplex_fixtures_test::artifacts::imports::multidep::MultidepProgram;
+use simplex_fixtures_test::artifacts::imports::multidep::derived_multidep::{MultidepArguments, MultidepWitness};
 
 fn get_multidep(context: &simplex::TestContext) -> (MultidepProgram, Script) {
     let arguments = MultidepArguments { prev_hash: 5 };

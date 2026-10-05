@@ -1,10 +1,10 @@
 [package]
-name = "smplx-sdk"
+name = "smplx-sdk-test"
 version = "0.0.12"
 description = "Simplex sdk to simplify the development with simplicity"
 license.workspace = true
 edition.workspace = true
-repository = "https://github.com/BlockstreamResearch/smplx"
+repository = "https://github.com/ikripaka/smplx"
 readme = "../../README.md"
 
 [lints]

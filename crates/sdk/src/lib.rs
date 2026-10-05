@@ -1,5 +1,5 @@
-#![doc(html_logo_url = "https://raw.githubusercontent.com/BlockstreamResearch/smplx/master/docs/simplex_logo.png")]
-#![doc(html_root_url = "https://docs.rs/smplx-sdk/latest/simplex/")]
+#![doc(html_logo_url = "https://raw.githubusercontent.com/ikripaka/smplx/master/docs/simplex_logo.png")]
+#![doc(html_root_url = "https://docs.rs/smplx-sdk-test/latest/simplex/")]
 #![cfg_attr(doc, doc = include_str!(concat!(env!("CARGO_MANIFEST_DIR" ), "/", "README.md")))]
 #![cfg_attr(not(doc), doc = "Simplex SDK")]
 #![warn(clippy::all, clippy::pedantic, missing_docs)]

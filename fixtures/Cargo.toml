@@ -1,11 +1,11 @@
 [package]
-name = "simplex_fixtures"
+name = "simplex_fixtures-test"
 edition = "2024"
 rust-version = "1.91.0"
 version = "0.1.0"
 
 [dependencies]
-smplx-std = { path = "../crates/simplex" }
+smplx-std = { package = "smplx-std-test", path = "../crates/simplex" }
 
 anyhow = { version = "1.0.101" }
 

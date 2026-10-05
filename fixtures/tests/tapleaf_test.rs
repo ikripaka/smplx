@@ -1,7 +1,7 @@
 use simplex::transaction::{FinalTransaction, PartialInput, ProgramInput, RequiredSignature};
 
-use simplex_fixtures::artifacts::tapleaf_check::TapleafCheckProgram;
-use simplex_fixtures::artifacts::tapleaf_check::derived_tapleaf_check::{TapleafCheckArguments, TapleafCheckWitness};
+use simplex_fixtures_test::artifacts::tapleaf_check::TapleafCheckProgram;
+use simplex_fixtures_test::artifacts::tapleaf_check::derived_tapleaf_check::{TapleafCheckArguments, TapleafCheckWitness};
 
 #[simplex::test]
 fn program_tapleaf_test(context: simplex::TestContext) -> anyhow::Result<()> {

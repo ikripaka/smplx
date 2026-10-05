@@ -4,7 +4,7 @@ use crate::commands::error::CommandError;
 use crate::commands::error::InitError;
 use crate::config::INIT_CONFIG;
 
-pub const SIMPLEX_CRATE_NAME: &str = "smplx-std";
+pub const SIMPLEX_CRATE_NAME: &str = "smplx-std-test";
 
 pub struct Init;
 
@@ -61,7 +61,7 @@ impl Init {
         let default_test_file_content: &[u8] = {
             b"\
 /// For a complete working example, browse the source at:
-/// <https://github.com/BlockstreamResearch/smplx/blob/master/examples/basic/tests/basic_test.rs>
+/// <https://github.com/ikripaka/smplx/blob/master/examples/basic/tests/basic_test.rs>
 #[simplex::test]
 fn dummy_test(context: simplex::TestContext) {
     // your test code here

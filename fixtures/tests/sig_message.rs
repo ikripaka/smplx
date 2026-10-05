@@ -6,8 +6,8 @@ use simplex::simplicityhl::elements::Script;
 use simplex::simplicityhl::simplicity::hashes::{Hash, sha256};
 use simplex::transaction::{FinalTransaction, PartialInput, ProgramInput, RequiredSignature, SigMessage};
 
-use simplex_fixtures::artifacts::sig_message::SigMessageProgram;
-use simplex_fixtures::artifacts::sig_message::derived_sig_message::{SigMessageArguments, SigMessageWitness};
+use simplex_fixtures_test::artifacts::sig_message::SigMessageProgram;
+use simplex_fixtures_test::artifacts::sig_message::derived_sig_message::{SigMessageArguments, SigMessageWitness};
 
 /// Must match the tag hashed into `tag_hash()` in sig_message.simf.
 const TAG: &str = "SimplexFixture/SigMessage";

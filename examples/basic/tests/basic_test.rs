@@ -2,8 +2,8 @@ use simplex::simplicityhl::elements::Script;
 
 use simplex::transaction::{FinalTransaction, PartialInput, ProgramInput, RequiredSignature, TxReceipt};
 
-use simplex_example::artifacts::p2pk::P2pkProgram;
-use simplex_example::artifacts::p2pk::derived_p2pk::{P2pkArguments, P2pkWitness};
+use simplex_example_test::artifacts::p2pk::P2pkProgram;
+use simplex_example_test::artifacts::p2pk::derived_p2pk::{P2pkArguments, P2pkWitness};
 
 fn get_p2pk(context: &simplex::TestContext) -> (P2pkProgram, Script) {
     let signer = context.get_default_signer();

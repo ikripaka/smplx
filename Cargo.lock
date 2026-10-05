@@ -1362,7 +1362,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "smplx-build"
+name = "smplx-build-test"
 version = "0.0.12"
 dependencies = [
  "glob",
@@ -1381,7 +1381,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "smplx-cli"
+name = "smplx-cli-test"
 version = "0.0.12"
 dependencies = [
  "anyhow",
@@ -1391,26 +1391,26 @@ dependencies = [
  "minreq 3.0.0",
  "serde",
  "serde_json",
- "smplx-build",
- "smplx-regtest",
- "smplx-sdk",
- "smplx-test",
+ "smplx-build-test",
+ "smplx-regtest-test",
+ "smplx-sdk-test",
+ "smplx-test-test",
  "thiserror",
  "toml 0.9.12+spec-1.1.0",
  "toml_edit",
 ]
 
 [[package]]
-name = "smplx-macros"
+name = "smplx-macros-test"
 version = "0.0.12"
 dependencies = [
- "smplx-build",
- "smplx-test",
+ "smplx-build-test",
+ "smplx-test-test",
  "syn 2.0.119",
 ]
 
 [[package]]
-name = "smplx-regtest"
+name = "smplx-regtest-test"
 version = "0.0.12"
 dependencies = [
  "electrsd",
@@ -1418,13 +1418,13 @@ dependencies = [
  "hmac",
  "serde",
  "sha2",
- "smplx-sdk",
+ "smplx-sdk-test",
  "thiserror",
  "toml 0.9.12+spec-1.1.0",
 ]
 
 [[package]]
-name = "smplx-sdk"
+name = "smplx-sdk-test"
 version = "0.0.12"
 dependencies = [
  "bip39",
@@ -1442,20 +1442,20 @@ dependencies = [
 ]
 
 [[package]]
-name = "smplx-std"
+name = "smplx-std-test"
 version = "0.0.12"
 dependencies = [
  "either",
  "serde",
  "simplicityhl",
- "smplx-macros",
- "smplx-sdk",
- "smplx-test",
+ "smplx-macros-test",
+ "smplx-sdk-test",
+ "smplx-test-test",
  "trybuild",
 ]
 
 [[package]]
-name = "smplx-test"
+name = "smplx-test-test"
 version = "0.0.12"
 dependencies = [
  "electrsd",
@@ -1463,22 +1463,22 @@ dependencies = [
  "quote",
  "serde",
  "simplicityhl",
- "smplx-regtest",
- "smplx-sdk",
+ "smplx-regtest-test",
+ "smplx-sdk-test",
  "syn 2.0.119",
  "thiserror",
  "toml 0.9.12+spec-1.1.0",
 ]
 
 [[package]]
-name = "smplx-wasm"
+name = "smplx-wasm-test"
 version = "0.0.12"
 dependencies = [
  "elements-miniscript",
  "hex",
  "serde_json",
  "simplicityhl",
- "smplx-sdk",
+ "smplx-sdk-test",
  "wasm-bindgen",
 ]
 

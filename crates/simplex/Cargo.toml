@@ -1,13 +1,13 @@
 [package]
-name = "smplx-std"
+name = "smplx-std-test"
 version = "0.0.12"
 description = "A blazingly-fast, ux-first simplicity development framework"
 rust-version = "1.91.0"
 license.workspace = true
 edition.workspace = true
-repository = "https://github.com/BlockstreamResearch/smplx"
+repository = "https://github.com/ikripaka/smplx"
 readme = "../../README.md"
-documentation = "https://docs.rs/smplx-std"
+documentation = "https://docs.rs/smplx-std-test"
 keywords = ["liquid", "elements", "smart-contracts", "simplicity", "framework"]
 categories = ["cryptography::cryptocurrencies"]
 

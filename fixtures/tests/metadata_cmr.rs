@@ -1,15 +1,15 @@
 use serde_json::Value;
 
-use simplex_fixtures::artifacts::dummy_panic::DummyPanicProgram;
-use simplex_fixtures::artifacts::dummy_panic::derived_dummy_panic::DummyPanicArguments;
-use simplex_fixtures::artifacts::imports::multidep::MultidepProgram;
-use simplex_fixtures::artifacts::imports::multidep::derived_multidep::MultidepArguments;
-use simplex_fixtures::artifacts::nested_sig::NestedSigProgram;
-use simplex_fixtures::artifacts::nested_sig::derived_nested_sig::NestedSigArguments;
-use simplex_fixtures::artifacts::p2pk::P2pkProgram;
-use simplex_fixtures::artifacts::p2pk::derived_p2pk::P2pkArguments;
-use simplex_fixtures::artifacts::tapleaf_check::TapleafCheckProgram;
-use simplex_fixtures::artifacts::tapleaf_check::derived_tapleaf_check::TapleafCheckArguments;
+use simplex_fixtures_test::artifacts::dummy_panic::DummyPanicProgram;
+use simplex_fixtures_test::artifacts::dummy_panic::derived_dummy_panic::DummyPanicArguments;
+use simplex_fixtures_test::artifacts::imports::multidep::MultidepProgram;
+use simplex_fixtures_test::artifacts::imports::multidep::derived_multidep::MultidepArguments;
+use simplex_fixtures_test::artifacts::nested_sig::NestedSigProgram;
+use simplex_fixtures_test::artifacts::nested_sig::derived_nested_sig::NestedSigArguments;
+use simplex_fixtures_test::artifacts::p2pk::P2pkProgram;
+use simplex_fixtures_test::artifacts::p2pk::derived_p2pk::P2pkArguments;
+use simplex_fixtures_test::artifacts::tapleaf_check::TapleafCheckProgram;
+use simplex_fixtures_test::artifacts::tapleaf_check::derived_tapleaf_check::TapleafCheckArguments;
 
 const METADATA_PATH: &str = concat!(env!("CARGO_MANIFEST_DIR"), "/src/artifacts/metadata.json");
 

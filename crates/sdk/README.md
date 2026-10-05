@@ -1,6 +1,6 @@
-# smplx-sdk
+# smplx-sdk-test
 
-The `smplx-sdk` crate is a standalone set of modules of a larger [Smplx](https://github.com/BlockstreamResearch/smplx) framework that can be used separately to interact with Simplicity smart contracts. 
+The `smplx-sdk-test` crate is a standalone set of modules of a larger [Smplx](https://github.com/ikripaka/smplx) framework that can be used separately to interact with Simplicity smart contracts.
 
 It also streamlines building, signing, and broadcasting transactions on Liquid.
 
@@ -11,7 +11,7 @@ It also streamlines building, signing, and broadcasting transactions on Liquid.
 - `transaction` - High-level builder abstractions over `FinalTransaction`, `UTXO`, `PartialInput`, and `PartialOutput`.
 - `program` - Load and interact with Simplicity (`.simf`) smart contracts.
 
-The `smplx-sdk` can be used as a standalone SDK, however, check out [Smplx](https://github.com/BlockstreamResearch/smplx) for a complete Simplicity development experience.
+The `smplx-sdk-test` can be used as a standalone SDK, however, check out [Smplx](https://github.com/ikripaka/smplx) for a complete Simplicity development experience.
 
 ## Features
 
@@ -19,7 +19,7 @@ By default, `smplx-sdk` is wasm-incompatible with provider functionality turned 
 
 ## Quick Start
 
-Read [simplex/README.md](https://github.com/BlockstreamResearch/smplx/blob/master/README.md).
+Read [simplex/README.md](https://github.com/ikripaka/smplx/blob/master/README.md).
 
 ## Disclaimer
 

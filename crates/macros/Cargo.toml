@@ -1,10 +1,10 @@
 [package]
-name = "smplx-macros"
+name = "smplx-macros-test"
 version = "0.0.12"
 description = "Simplex macros re-export package"
 license.workspace = true
 edition.workspace = true
-repository = "https://github.com/BlockstreamResearch/smplx"
+repository = "https://github.com/ikripaka/smplx"
 readme = "../../README.md"
 
 [lib]

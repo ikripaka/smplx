@@ -1,7 +1,7 @@
 use simplex::transaction::{FinalTransaction, PartialInput, ProgramInput, RequiredSignature};
 
-use simplex_fixtures::artifacts::dummy_panic::DummyPanicProgram;
-use simplex_fixtures::artifacts::dummy_panic::derived_dummy_panic::{DummyPanicArguments, DummyPanicWitness};
+use simplex_fixtures_test::artifacts::dummy_panic::DummyPanicProgram;
+use simplex_fixtures_test::artifacts::dummy_panic::derived_dummy_panic::{DummyPanicArguments, DummyPanicWitness};
 
 fn setup_dummy(context: &simplex::TestContext) -> (DummyPanicProgram, simplex::simplicityhl::elements::Script) {
     let signer = context.get_default_signer();

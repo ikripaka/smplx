@@ -32,10 +32,10 @@ See the [simplexup manual](simplexup/README.md) for more details.
 
 ## Getting started
 
-Add `smplx-std` dependency to cargo:
+Add `smplx-std-test` dependency to cargo:
 
 ```bash
-cargo add --dev smplx-std
+cargo add --dev smplx-std-test
 ```
 
 Optionally, initialize a new project:
