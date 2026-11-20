@@ -11,7 +11,7 @@ use simplicityhl::simplicity::jet::elements::{ElementsEnv, ElementsUtxo};
 use simplicityhl::simplicity::jet::{Elements, JetEnvironment};
 use simplicityhl::simplicity::{Cmr, RedeemNode, leaf_version};
 use simplicityhl::{Arguments, Parameters, ResolvedType, TemplateProgramWitness, WitnessTypes, WitnessValues};
-use simplicityhl::{CompiledProgram, UnstableFeatures};
+use simplicityhl::{CompiledProgram, RawSources, TemplateAst, UnstableFeatures};
 
 use crate::global::GlobalConfig;
 use crate::program::logger::ProgramLogger;
@@ -146,6 +146,7 @@ pub trait ProgramFactory<P: AsRef<Program> + Sized> {
 #[derive(Clone)]
 pub struct Program {
     source: Arc<str>,
+    raw_sources: RawSources,
     arguments: Arguments,
     pub_key: XOnlyPublicKey,
     storage: Vec<Vec<u8>>,
@@ -302,6 +303,8 @@ impl Program {
     pub fn new(source: impl Into<Arc<str>>, arguments: impl Into<Arguments>) -> Self {
         Self {
             source: source.into(),
+            // Until `with_raw_sources`, raw files are read from disk, as for a source file.
+            raw_sources: RawSources::from_disk(),
             pub_key: tr_unspendable_key(),
             arguments: arguments.into(),
             storage: Vec::new(),
@@ -309,6 +312,24 @@ impl Program {
             compiled: Arc::new(OnceLock::new()),
             spend_info: OnceLock::new(),
         }
+    }
+
+    /// Gives the compiler the raw Simplicity files of the source's `extern fn` declarations, as
+    /// pairs of key ([`RawSources`]) and text; it then reads no raw file from disk. A source
+    /// string has no directory, so a relative path needs this. The bindings `simplex build`
+    /// generates pass the files they embed.
+    #[must_use]
+    pub fn with_raw_sources<P, T>(mut self, raw_sources: impl IntoIterator<Item = (P, T)>) -> Self
+    where
+        P: Into<Arc<str>>,
+        T: Into<Arc<str>>,
+    {
+        self.raw_sources = raw_sources.into_iter().collect();
+        // Other raw code changes the CMR
+        self.compiled = Arc::new(OnceLock::new());
+        self.spend_info = OnceLock::new();
+
+        self
     }
 
     /// Sets the Taproot internal key, which changes the address.
@@ -495,7 +516,8 @@ impl Program {
     /// Compiles the program, or returns the cached result of an earlier compilation.
     ///
     /// # Errors
-    /// Returns `ProgramError::Compilation` if the source doesn't compile with these arguments.
+    /// Returns compiler diagnostics for analysis failures, or `ProgramError::Compilation`
+    /// if instantiation fails with these arguments.
     pub fn load(&self) -> Result<&CompiledProgram, ProgramError> {
         Ok(&self.load_with_cmr()?.0)
     }
@@ -510,15 +532,22 @@ impl Program {
             return Ok(loaded);
         }
 
-        let compiled = CompiledProgram::new_with_unstable(
+        let template = TemplateAst::new_with_raw_sources(
             Arc::clone(&self.source),
             &UnstableFeatures::all(),
-            self.arguments.clone(),
-            self.include_debug_symbols
-                .unwrap_or_else(GlobalConfig::get_include_debug_symbols),
             Box::new(ElementsJetHinter),
+            &self.raw_sources,
         )
-        .map_err(ProgramError::Compilation)?;
+        .map_err(|diags| ProgramError::CompilerDiagnostics(Box::new(diags)))?;
+
+        let compiled = template
+            .instantiate(
+                self.arguments.clone(),
+                self.include_debug_symbols
+                    .unwrap_or_else(GlobalConfig::get_include_debug_symbols),
+            )
+            .map_err(ProgramError::Compilation)?;
+
         let cmr = compiled.commit().cmr();
 
         // Update the cache
@@ -737,6 +766,63 @@ mod tests {
         pst.add_input(input);
 
         pst
+    }
+
+    #[test]
+    fn raw_sources_resolve_relative_paths_without_files() {
+        let source = "#[path = \"raw/equal.simpl\"] \
+            extern fn eq(a: u32, b: u32) -> bool; fn main() { assert!(eq(7, 7)); }";
+        let raw = [("raw/equal.simpl", "export := jet_eq_32 : (2^32 * 2^32) -> 2")];
+
+        // A string source has no directory to read a relative path from.
+        let without = Program::new(source, Arguments::default());
+        assert!(matches!(without.load(), Err(ProgramError::CompilerDiagnostics(_))));
+
+        let with = Program::new(source, Arguments::default()).with_raw_sources(raw);
+        assert!(with.load().is_ok());
+
+        // New raw sources are compiled again, not served from the cache.
+        let other = with.with_raw_sources([("raw/equal.simpl", "export := jet_eq_16 : (2^16 * 2^16) -> 2")]);
+        assert!(matches!(other.load(), Err(ProgramError::CompilerDiagnostics(_))));
+    }
+
+    #[test]
+    fn raw_diagnostics_are_typed_and_failures_do_not_fill_cache() {
+        use simplicityhl::error::Error;
+        let root = std::env::temp_dir().join(format!("simplex-sdk-raw-{}", std::process::id()));
+        std::fs::create_dir_all(&root).unwrap();
+        let raw = root.join("equal.simpl");
+        std::fs::write(&raw, "export := jet_eq_32 : (2^32 * 2^32) -> 2").unwrap();
+        let source = format!(
+            "#[path = \"{}\"] extern fn eq(a: u32, b: u32) -> (u32, u32); fn main() {{}}",
+            raw.display()
+        );
+        let program = Program::new(source, Arguments::default());
+        for error in [
+            program.load().unwrap_err(),
+            program.get_argument_types().unwrap_err(),
+            program.get_witness_types().unwrap_err(),
+        ] {
+            assert!(
+                std::error::Error::source(&error)
+                    .and_then(|source| source.downcast_ref::<Box<simplicityhl::error::DiagnosticManager>>())
+                    .is_some()
+            );
+            let ProgramError::CompilerDiagnostics(diags) = error else {
+                panic!("expected compiler diagnostics");
+            };
+            assert!(
+                diags
+                    .diagnostics()
+                    .iter()
+                    .any(|d| matches!(d.error(), Error::SimplicityTypeMismatch { .. }))
+            );
+            assert!(program.compiled.get().is_none());
+        }
+        std::fs::write(&raw, "export := iden : (2^32 * 2^32) -> (2^32 * 2^32)").unwrap();
+        program.load().unwrap();
+        assert!(program.compiled.get().is_some());
+        std::fs::remove_dir_all(root).unwrap();
     }
 
     #[test]

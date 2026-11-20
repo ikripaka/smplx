@@ -5,6 +5,7 @@
 # [build]
 # src_dir = "simf"
 # simf_files = ["**/*.simf"]
+# simpl_files = ["**/*.simpl"]  # raw Simplicity for `extern fn` declarations
 # out_dir = "src/artifacts"
 
 # [dependencies]

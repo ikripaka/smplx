@@ -9,6 +9,7 @@ use crate::macros::types::{AllocationType, RustType};
 
 pub struct SimfContractMeta {
     pub contract_source_const_name: proc_macro2::Ident,
+    pub contract_raw_sources_const_name: proc_macro2::Ident,
     pub program_struct_name: proc_macro2::Ident,
     pub args_struct: WitnessStruct,
     pub witness_struct: WitnessStruct,
@@ -55,10 +56,13 @@ impl SimfContractMeta {
         let witness_struct =
             WitnessStruct::generate_witness_struct(&simf_content.contract_name, &abi_meta.witness_types)?;
         let contract_source_const_name = convert_contract_name_to_contract_source_const(&simf_content.contract_name);
+        let contract_raw_sources_const_name =
+            convert_contract_name_to_contract_raw_sources_const(&simf_content.contract_name);
         let program_struct_name = construct_program_name(&simf_content.contract_name);
 
         Ok(SimfContractMeta {
             contract_source_const_name,
+            contract_raw_sources_const_name,
             program_struct_name,
             args_struct,
             witness_struct,
@@ -528,6 +532,10 @@ pub fn convert_contract_name_to_struct_name(contract_name: &str) -> String {
 
 pub fn convert_contract_name_to_contract_source_const(contract_name: &str) -> proc_macro2::Ident {
     format_ident!("{}_CONTRACT_SOURCE", contract_name.to_uppercase())
+}
+
+pub fn convert_contract_name_to_contract_raw_sources_const(contract_name: &str) -> proc_macro2::Ident {
+    format_ident!("{}_RAW_SOURCES", contract_name.to_uppercase())
 }
 
 pub fn convert_contract_name_to_contract_module(contract_name: &str) -> proc_macro2::Ident {

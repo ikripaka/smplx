@@ -5,6 +5,7 @@ use crate::error::BuildError;
 // Default values for optional [build] fields.
 pub const DEFAULT_OUT_DIR_NAME: &str = "src/artifacts";
 pub const DEFAULT_INCLUDE_PATH: &str = "**/*.simf";
+pub const DEFAULT_RAW_INCLUDE_PATH: &str = "**/*.simpl";
 pub const DEFAULT_SRC_DIR_NAME: &str = "simf";
 
 // TOML section name.
@@ -16,6 +17,7 @@ pub const CONFIG_FILENAME: &str = "Simplex.toml";
 #[serde(default)]
 pub struct BuildConfig {
     pub simf_files: Vec<String>,
+    pub simpl_files: Vec<String>,
     pub src_dir: String,
     pub out_dir: String,
 }
@@ -39,6 +41,7 @@ impl Default for BuildConfig {
     fn default() -> Self {
         Self {
             simf_files: vec![DEFAULT_INCLUDE_PATH.into()],
+            simpl_files: vec![DEFAULT_RAW_INCLUDE_PATH.into()],
             src_dir: DEFAULT_SRC_DIR_NAME.into(),
             out_dir: DEFAULT_OUT_DIR_NAME.into(),
         }
@@ -56,6 +59,7 @@ mod tests {
                 [build]
                 src_dir = "contracts"
                 simf_files = ["one.simf", "nested/*.simf"]
+                simpl_files = ["raw/*.simpl"]
                 out_dir = "generated"
             "#,
         )
@@ -63,6 +67,13 @@ mod tests {
 
         assert_eq!(config.src_dir, "contracts");
         assert_eq!(config.simf_files, ["one.simf", "nested/*.simf"]);
+        assert_eq!(config.simpl_files, ["raw/*.simpl"]);
         assert_eq!(config.out_dir, "generated");
+    }
+
+    #[test]
+    fn raw_files_default_to_all_simpl_files() {
+        let config = BuildConfig::from_source("[build]\nsrc_dir = \"contracts\"").unwrap();
+        assert_eq!(config.simpl_files, [DEFAULT_RAW_INCLUDE_PATH]);
     }
 }

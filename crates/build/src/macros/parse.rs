@@ -15,6 +15,7 @@ pub struct SynFilePath {
 pub struct SimfContent {
     pub content: String,
     pub contract_name: String,
+    pub path: PathBuf,
 }
 
 impl Parse for SynFilePath {
@@ -96,7 +97,11 @@ impl SimfContent {
 
         x.read_to_string(&mut content)?;
 
-        Ok(SimfContent { content, contract_name })
+        Ok(SimfContent {
+            content,
+            contract_name,
+            path: path.clone(),
+        })
     }
 
     /// Prepares a contract name for use as a Rust module/identifier.

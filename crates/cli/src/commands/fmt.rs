@@ -314,11 +314,12 @@ mod tests {
             simf_files: vec!["*.simf".into(), "**/*.simf".into()],
             src_dir: "simf".into(),
             out_dir: "None".into(),
+            simpl_files: vec![],
         };
 
         let files = Format::resolve_files(&config, &project_root).expect("fixture files should resolve");
 
-        assert_eq!(files.len(), 17);
+        assert_eq!(files.len(), 19);
         assert!(files.iter().all(|path| path.extension() == Some(OsStr::new("simf"))));
     }
 
@@ -329,6 +330,7 @@ mod tests {
             simf_files: vec!["no-such-file-*.simf".into()],
             src_dir: "simf".into(),
             out_dir: "None".into(),
+            simpl_files: vec![],
         };
 
         assert!(Format::resolve_files(&config, &project_root).is_err());

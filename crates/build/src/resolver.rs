@@ -212,7 +212,7 @@ impl ArtifactsResolver {
     }
 
     /// Resolves `.` and `..` without touching the filesystem, as `path` may not exist yet.
-    fn normalize(path: &Path) -> PathBuf {
+    pub(crate) fn normalize(path: &Path) -> PathBuf {
         let mut normalized = PathBuf::new();
 
         for component in path.components() {

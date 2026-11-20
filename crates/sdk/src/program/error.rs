@@ -48,6 +48,11 @@ pub enum ProgramError {
         deficit_wu: u64,
     },
 
+    // TODO: delete?
+    /// Structured errors from compiler analysis.
+    #[error("{}", .0.render_to_string())]
+    CompilerDiagnostics(#[source] Box<simplicityhl::error::DiagnosticManager>),
+
     /// Error thrown when compiling the raw Simplicity program source fails.
     #[error("Failed to compile Simplicity program: {0}")]
     Compilation(String),

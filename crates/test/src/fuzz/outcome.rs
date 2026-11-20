@@ -62,7 +62,9 @@ impl Outcome {
                     return Err(SetupError::Engine(error.to_string()));
                 }
             },
-            ProgramError::Compilation(_) | ProgramError::ProgramGenAbiMeta(_) => {
+            ProgramError::CompilerDiagnostics(_)
+            | ProgramError::Compilation(_)
+            | ProgramError::ProgramGenAbiMeta(_) => {
                 return Err(SetupError::Arguments(error.to_string()));
             }
             ProgramError::WitnessSatisfaction(_) => return Err(SetupError::Witness(error.to_string())),

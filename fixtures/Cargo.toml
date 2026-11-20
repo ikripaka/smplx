@@ -14,3 +14,7 @@ anyhow = { version = "1.0.104" }
 
 [dev-dependencies]
 serde_json = { version = "1.0.154" }
+
+# Same as the Simplex workspace: `[patch]` applies only to the workspace being built.
+[patch.crates-io]
+simplicityhl = { git = "https://github.com/ikripaka/SimplicityHL.git", branch = "feat/simplicity-support" }

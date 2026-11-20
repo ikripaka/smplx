@@ -8,6 +8,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use serde::Serialize;
 
+use simplicityhl::RawSources;
 use simplicityhl::TemplateAst;
 use simplicityhl::UnstableFeatures;
 use simplicityhl::ast::ElementsJetHinter;
@@ -18,9 +19,11 @@ use simplicityhl::source::CanonSourceFile;
 
 use crate::contract_id::ContractId;
 use crate::macros::codegen::{
-    construct_program_name, convert_contract_name_to_contract_module, convert_contract_name_to_contract_source_const,
+    construct_program_name, convert_contract_name_to_contract_module,
+    convert_contract_name_to_contract_raw_sources_const, convert_contract_name_to_contract_source_const,
 };
 use crate::macros::parse::SimfContent;
+use crate::resolver::ArtifactsResolver;
 
 use super::error::BuildError;
 
@@ -49,9 +52,23 @@ struct TreeNode {
     dirs: HashMap<String, TreeNode>,
 }
 
+/// A raw Simplicity (`.simpl`) file of the project.
+struct RawFile {
+    /// Path relative to `base_dir`, with `/` separators; mirrored under `out_dir/simf/`.
+    relative_path: String,
+    text: Arc<str>,
+}
+
 #[derive(Default, Serialize)]
 struct Metadata {
-    sources: BTreeMap<String, SourceEntry>,
+    sources: Sources,
+}
+
+/// The sources of the artifacts, by path relative to `base_dir`.
+#[derive(Default, Serialize)]
+struct Sources {
+    simplicityhl: BTreeMap<String, SourceEntry>,
+    simplicity: BTreeMap<String, RawEntry>,
 }
 
 #[derive(Serialize)]
@@ -60,16 +77,27 @@ struct SourceEntry {
     content: String,
 }
 
+/// A `.simpl` file, copied beside the flattened contracts.
+#[derive(Serialize)]
+struct RawEntry {
+    /// SHA-256 of the file.
+    sha256: String,
+    /// The entries contracts import from it, with their CMRs.
+    entries: BTreeMap<String, String>,
+}
+
 impl ArtifactsGenerator {
     pub fn generate_artifacts(
         root_dir: &Path,
         out_dir: impl AsRef<Path>,
         base_dir: impl AsRef<Path>,
         simfs: &[impl AsRef<Path>],
+        simpls: &[impl AsRef<Path>],
         validated_deps: &ValidatedDeps,
     ) -> Result<(), BuildError> {
         let out_dir = out_dir.as_ref();
         let base_dir = base_dir.as_ref();
+        let raw_files = Self::read_raw_files(simpls, base_dir)?;
 
         let json_metadata_file = out_dir.join(METADATA_FILENAME);
 
@@ -88,8 +116,35 @@ impl ArtifactsGenerator {
 
         let artifacts = simfs
             .iter()
-            .map(|s| Self::process_simf(s.as_ref(), base_dir, validated_deps, &simf_out_dir, &mut metadata))
+            .map(|s| {
+                Self::process_simf(
+                    s.as_ref(),
+                    base_dir,
+                    validated_deps,
+                    &raw_files,
+                    &simf_out_dir,
+                    &mut metadata,
+                )
+            })
             .collect::<Result<Vec<_>, _>>()?;
+
+        // Every contract compiled: mirror the raw files beside them, where their flattened
+        // `extern fn` paths point.
+        for raw in &raw_files {
+            let target = simf_out_dir.join(&raw.relative_path);
+            if let Some(parent) = target.parent() {
+                fs::create_dir_all(parent)?;
+            }
+            fs::write(&target, raw.text.as_bytes())?;
+            metadata
+                .sources
+                .simplicity
+                .entry(raw.relative_path.clone())
+                .or_insert_with(|| RawEntry {
+                    sha256: sha256_hex(raw.text.as_bytes()),
+                    entries: BTreeMap::new(),
+                });
+        }
 
         let file = std::fs::File::create(&json_metadata_file)?;
         serde_json::to_writer_pretty(BufWriter::new(file), &metadata)?;
@@ -123,6 +178,7 @@ impl ArtifactsGenerator {
         source: &Path,
         base_dir: &Path,
         validated_deps: &ValidatedDeps,
+        raw_files: &[RawFile],
         simf_out_dir: &Path,
         metadata: &mut Metadata,
     ) -> Result<SimfArtifact, BuildError> {
@@ -137,11 +193,42 @@ impl ArtifactsGenerator {
             fs::create_dir_all(parent)?;
         }
 
-        let source_entry = Self::process_content(source, base_dir, validated_deps)?;
+        // The compiler is given the raw files by key: relative to this contract's directory.
+        let contract_dir = relative_path.parent().unwrap_or(Path::new(""));
+        let raw_sources = Self::raw_sources_for(contract_dir, raw_files)?;
+        let (source_entry, raw_imports) = Self::process_content(source, base_dir, validated_deps, &raw_sources)?;
+        // The compiler reads a raw file that is not given from disk, but only the given ones are
+        // mirrored into the artifacts: a contract must not import any other.
+        if let Some(import) = raw_imports
+            .iter()
+            .find(|import| raw_sources.get(&import.path).is_none())
+        {
+            return Err(BuildError::GenerationFailed(format!(
+                "the raw Simplicity file `{}` was not given: add it to `simpl_files`",
+                import.path
+            )));
+        }
         fs::write(&mirrored_path, &source_entry.content)?;
 
+        for import in raw_imports {
+            // The import's key is relative to the contract; the metadata's, to `base_dir`.
+            let path = to_key(&ArtifactsResolver::normalize(&contract_dir.join(import.path.as_ref())))?;
+            if let Some(raw) = raw_files.iter().find(|raw| raw.relative_path == path) {
+                metadata
+                    .sources
+                    .simplicity
+                    .entry(path)
+                    .or_insert_with(|| RawEntry {
+                        sha256: sha256_hex(raw.text.as_bytes()),
+                        entries: BTreeMap::new(),
+                    })
+                    .entries
+                    .insert(import.entry.to_string(), import.cmr.to_string());
+            }
+        }
+
         let relative_path_str = relative_path.display().to_string();
-        metadata.sources.insert(relative_path_str, source_entry);
+        metadata.sources.simplicityhl.insert(relative_path_str, source_entry);
 
         let contract_name = SimfContent::extract_content_from_path(&source.to_path_buf())
             .map_err(BuildError::FailedToExtractContent)?
@@ -154,31 +241,73 @@ impl ArtifactsGenerator {
         })
     }
 
+    /// Reads the project's `.simpl` files, by path relative to `base_dir`.
+    fn read_raw_files(simpls: &[impl AsRef<Path>], base_dir: &Path) -> Result<Vec<RawFile>, BuildError> {
+        let canon_base = base_dir.canonicalize().unwrap_or_else(|_| base_dir.to_path_buf());
+
+        simpls
+            .iter()
+            .map(|path| {
+                let path = path.as_ref();
+                let relative = path
+                    .strip_prefix(base_dir)
+                    .or_else(|_| path.strip_prefix(&canon_base))
+                    .map_err(BuildError::NoBasePathForGeneration)?;
+                Ok(RawFile {
+                    relative_path: to_key(relative)?,
+                    text: Arc::from(fs::read_to_string(path)?),
+                })
+            })
+            .collect()
+    }
+
+    /// The raw files keyed for a contract in `contract_dir` (relative to `base_dir`): by their
+    /// path relative to that directory, as its `extern fn` declarations resolve them.
+    fn raw_sources_for(contract_dir: &Path, raw_files: &[RawFile]) -> Result<RawSources, BuildError> {
+        let mut sources = RawSources::new();
+
+        for raw in raw_files {
+            let key = pathdiff::diff_paths(Path::new(&raw.relative_path), contract_dir).ok_or_else(|| {
+                BuildError::FailedToFindCorrectRelativePath {
+                    root_dir: contract_dir.to_path_buf(),
+                    simf_file: PathBuf::from(&raw.relative_path),
+                }
+            })?;
+            sources.insert(to_key(&key)?, Arc::clone(&raw.text));
+        }
+
+        Ok(sources)
+    }
+
     /// Reads and processes the content of a `.simf` file.
     fn process_content(
         source: &Path,
         project_root: &Path,
         validated_deps: &ValidatedDeps,
-    ) -> Result<SourceEntry, BuildError> {
+        raw_sources: &RawSources,
+    ) -> Result<(SourceEntry, Vec<simplicityhl::RawImport>), BuildError> {
         let canon_source = CanonPath::canonicalize(source).map_err(BuildError::PathCanonicalization)?;
         let content = fs::read_to_string(source)?;
         let canon_source_file = CanonSourceFile::new(canon_source, Arc::from(content));
         let dependency_map = Self::build_dependency_map(validated_deps, project_root)?;
 
-        let template = TemplateAst::new_with_dep(
+        let template = TemplateAst::new_with_dep_and_raw_sources(
             canon_source_file.clone(),
             &dependency_map,
             &UnstableFeatures::all(),
             Box::new(ElementsJetHinter),
+            raw_sources,
         )
-        .map_err(|diags| BuildError::DryRun(diags.to_string()))?;
+        .map_err(|diags| BuildError::CompilerDiagnostics(Box::new(diags)))?;
         let flattened = TemplateAst::flatten(canon_source_file, &dependency_map, &UnstableFeatures::all())
-            .map_err(|diags| BuildError::Flattening(diags.to_string()))?;
+            .map_err(|diags| BuildError::CompilerDiagnostics(Box::new(diags)))?;
 
-        Ok(SourceEntry {
+        let entry = SourceEntry {
             cmr: ContractId::from_template(&template)?,
             content: flattened,
-        })
+        };
+
+        Ok((entry, template.raw_imports().to_vec()))
     }
 
     /// Every directory between `base_dir` and `source` becomes a module of the bindings.
@@ -308,6 +437,7 @@ impl ArtifactsGenerator {
         let program_name = construct_program_name(contract_name);
         let include_simf_source_const = convert_contract_name_to_contract_source_const(contract_name);
         let include_simf_module = convert_contract_name_to_contract_module(contract_name);
+        let include_simf_raw_sources_const = convert_contract_name_to_contract_raw_sources_const(contract_name);
         let target_simf_str = target_simf.to_string_lossy().into_owned();
 
         let code = quote! {
@@ -323,13 +453,18 @@ impl ArtifactsGenerator {
                 program: Program,
             }
 
+            // TODO: refactor | bad design
             impl #program_name {
                 pub const SOURCE: &'static str = #include_simf_module::#include_simf_source_const;
+                /// The raw Simplicity files of the contract's `extern fn` declarations, by declared path.
+                pub const RAW_SOURCES: &'static [(&'static str, &'static str)] =
+                    #include_simf_module::#include_simf_raw_sources_const;
 
                 #[must_use]
                 pub fn new(arguments: impl Into<Arguments>) -> Self {
                     Self {
-                        program: Program::new(Self::SOURCE, arguments.into()),
+                        program: Program::new(Self::SOURCE, arguments.into())
+                            .with_raw_sources(Self::RAW_SOURCES.iter().copied()),
                     }
                 }
 
@@ -419,9 +554,120 @@ impl ArtifactsGenerator {
     }
 }
 
+/// A relative path as a raw-source key: `/` separators.
+fn to_key(path: &Path) -> Result<String, BuildError> {
+    let parts = path
+        .components()
+        .map(|c| match c {
+            Component::Normal(name) => name.to_str().map(str::to_owned),
+            Component::ParentDir => Some("..".to_owned()),
+            Component::CurDir => Some(".".to_owned()),
+            _ => None,
+        })
+        .collect::<Option<Vec<_>>>()
+        .ok_or_else(|| BuildError::GenerationPath(format!("not a relative UTF-8 path: '{}'", path.display())))?;
+    Ok(parts.join("/"))
+}
+
+// TODO: change on the CMR
+fn sha256_hex(bytes: &[u8]) -> String {
+    use simplicityhl::simplicity::hashes::sha256;
+    sha256::Hash::hash(bytes).to_string()
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    // TODO: refactor
+    #[test]
+    fn raw_diagnostics_are_preserved_before_artifacts_are_written() {
+        use simplicityhl::error::{Error, Location};
+        use simplicityhl::resolution::DependencyMapBuilder;
+
+        let root = std::env::temp_dir().join(format!("simplex-build-raw-{}", std::process::id()));
+        let src = root.join("simf");
+        let out = root.join("out");
+
+        fs::create_dir_all(src.join("nested")).unwrap();
+        fs::create_dir_all(&out).unwrap();
+        fs::write(
+            src.join("main.simf"),
+            "use crate::nested::lib::eq; fn main() { assert!(eq(1, 1)); }",
+        )
+        .unwrap();
+        fs::write(
+            src.join("nested/lib.simf"),
+            "#[path = \"eq.simpl\"] pub extern fn eq(a: u32, b: u32) -> u32;",
+        )
+        .unwrap();
+        fs::write(src.join("nested/eq.simpl"), "export := jet_eq_32 : (2^32 * 2^32) -> 2").unwrap();
+
+        let deps = DependencyMapBuilder::new().validate_deps().unwrap();
+        let build = || {
+            ArtifactsGenerator::generate_artifacts(
+                &root,
+                &out,
+                &src,
+                &[src.join("main.simf")],
+                &[src.join("nested/eq.simpl")],
+                &deps,
+            )
+        };
+        let error = build().unwrap_err();
+        let rendered = error.to_string();
+
+        assert!(
+            std::error::Error::source(&error)
+                .and_then(|source| source.downcast_ref::<Box<simplicityhl::error::DiagnosticManager>>())
+                .is_some()
+        );
+
+        let BuildError::CompilerDiagnostics(diags) = error else {
+            panic!("unexpected error");
+        };
+
+        let diag = diags
+            .diagnostics()
+            .iter()
+            .find(|d| matches!(d.error(), Error::SimplicityTypeMismatch { .. }))
+            .unwrap();
+        let Location::Code(span) = diag.location() else {
+            panic!("missing declaration span");
+        };
+        assert_eq!(
+            diags.sources().unwrap().path(span.file_id).unwrap().as_path(),
+            src.join("nested/lib.simf").canonicalize().unwrap()
+        );
+
+        for part in ["export", "nested/lib.simf", "expected structural", "found"] {
+            assert!(rendered.contains(part), "{rendered}");
+        }
+        assert!(!out.join("metadata.json").exists());
+        assert!(!out.join("simf/main.simf").exists());
+
+        fs::write(
+            src.join("nested/lib.simf"),
+            "#[path = \"eq.simpl\"] pub extern fn eq(a: u32, b: u32) -> bool;",
+        )
+        .unwrap();
+
+        build().unwrap();
+
+        assert!(out.join("metadata.json").exists());
+        // The raw file is mirrored beside the contract, and the flattened source names it relatively.
+        assert!(out.join("simf/nested/eq.simpl").exists());
+
+        let flattened = fs::read_to_string(out.join("simf/main.simf")).unwrap();
+        assert!(flattened.contains("path = \"nested/eq.simpl\""), "{flattened}");
+
+        let metadata: serde_json::Value =
+            serde_json::from_str(&fs::read_to_string(out.join("metadata.json")).unwrap()).unwrap();
+        assert!(metadata["sources"]["simplicityhl"]["main.simf"]["cmr"].is_string());
+        assert!(metadata["sources"]["simplicity"]["nested/eq.simpl"]["entries"]["export"].is_string());
+
+        fs::remove_dir_all(root).unwrap();
+    }
 
     #[test]
     fn directories_must_be_rust_identifiers() {

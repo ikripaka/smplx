@@ -130,6 +130,10 @@ pub enum BuildError {
         source_dir: PathBuf,
     },
 
+    /// Diagnostics from compiler analysis or flattening.
+    #[error("{}", .0.render_to_string())]
+    CompilerDiagnostics(#[source] Box<simplicityhl::error::DiagnosticManager>),
+
     #[error("Failed to flatten program: {0}")]
     Flattening(String),
 
