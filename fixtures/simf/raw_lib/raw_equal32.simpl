@@ -1,0 +1,2 @@
+-- The two u32 parameters arrive as a product in declaration order.
+export := jet_eq_32 : (2^32 * 2^32) -> 2

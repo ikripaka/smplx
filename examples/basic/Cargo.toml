@@ -8,3 +8,7 @@ version = "0.1.0"
 smplx-std = { path = "../../crates/simplex" }
 
 anyhow = { version = "1.0.104" }
+
+# Same as the Simplex workspace: `[patch]` applies only to the workspace being built.
+[patch.crates-io]
+simplicityhl = { git = "https://github.com/ikripaka/SimplicityHL.git", branch = "feat/simplicity-support" }

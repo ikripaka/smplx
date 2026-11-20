@@ -20,12 +20,16 @@ impl Build {
         let dependency_builder = ArtifactsResolver::resolve_remappings(root_dir, deps)?;
 
         let files_to_build = ArtifactsResolver::resolve_files_to_build(root_dir, &config.src_dir, &config.simf_files)?;
+        let raw_files: Vec<_> = ArtifactsResolver::resolve_simf_files(root_dir, &config.src_dir, &config.simpl_files)?
+            .into_iter()
+            .collect();
 
         Ok(ArtifactsGenerator::generate_artifacts(
             root_dir,
             &output_dir,
             &src_dir,
             &files_to_build,
+            &raw_files,
             &dependency_builder,
         )?)
     }
